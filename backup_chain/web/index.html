@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>备份链时间线 · 恢复行验证</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Minimal backup chain</p>
+          <h1>完整备份 + 持续变更段</h1>
+          <p class="subtitle">选择秒级恢复点，直接检查恢复出的真实行；删除前先看清依赖，损坏时停在最后可信点。</p>
+        </div>
+        <div class="top-actions">
+          <div class="repo-meta" id="repoMeta">加载中…</div>
+          <button class="btn ghost" id="refreshBtn" type="button">刷新</button>
+          <button class="btn danger-ghost" id="resetDemoBtn" type="button">重置演示数据</button>
+        </div>
+      </header>
+
+      <section class="card picker-card" aria-labelledby="pickerTitle">
+        <div class="card-head">
+          <div>
+            <h2 id="pickerTitle">秒级恢复点</h2>
+            <p class="hint">拖动时间轴或精确到秒；页面展示的是实际重放后的行。</p>
+          </div>
+          <div class="time-controls">
+            <button class="btn icon" id="prevSecond" type="button" aria-label="前一秒">‹</button>
+            <input type="datetime-local" id="atInput" step="1" aria-label="恢复时间，精确到秒" />
+            <button class="btn icon" id="nextSecond" type="button" aria-label="后一秒">›</button>
+            <button class="btn primary" id="restoreBtn" type="button">恢复并查看行</button>
+          </div>
+        </div>
+        <div class="slider-row">
+          <span class="mono" id="minLabel">--</span>
+          <input type="range" id="secondSlider" min="0" max="1" value="0" step="1" aria-label="秒级时间轴" />
+          <span class="mono" id="maxLabel">--</span>
+        </div>
+        <div class="span-bar" id="spanBar" role="img" aria-label="恢复区间健康条"></div>
+        <div class="span-legend">
+          <span><i class="dot good"></i>可完整恢复</span>
+          <span><i class="dot critical"></i>段损坏 / 缺失 / 重叠</span>
+          <span><i class="dot deleted"></i>计划删除后不可用</span>
+          <span class="hint">点击彩色区间可跳到该区间起点</span>
+        </div>
+      </section>
+
+      <main class="grid">
+        <section class="card result-card" aria-labelledby="resultTitle">
+          <div class="card-head">
+            <div>
+              <h2 id="resultTitle">恢复结果与实际行</h2>
+              <p class="hint" id="resultSubtitle">等待选择恢复点…</p>
+            </div>
+            <div class="stats" id="resultStats"></div>
+          </div>
+          <div id="recoveryBanner" class="banner neutral" role="status">尚未恢复</div>
+          <div class="table-wrap" tabindex="0" aria-live="polite">
+            <table id="rowsTable">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <aside class="side-column">
+          <section class="card" aria-labelledby="chainTitle">
+            <div class="card-head">
+              <div>
+                <h2 id="chainTitle">备份链</h2>
+                <p class="hint">点击变更段可计算删除依赖</p>
+              </div>
+            </div>
+            <div class="chain" id="chainView"></div>
+          </section>
+
+          <section class="card" aria-labelledby="depTitle">
+            <div class="card-head">
+              <div>
+                <h2 id="depTitle">删除依赖计算</h2>
+                <p class="hint" id="selectedSegmentLabel">未选择段</p>
+              </div>
+            </div>
+            <div class="form-grid">
+              <label class="field">
+                <span>保留起点 retain_from</span>
+                <input type="datetime-local" id="retainInput" step="1" />
+              </label>
+              <div class="button-row">
+                <button class="btn" id="useFull2Btn" type="button">设为第 2 个完整备份</button>
+                <button class="btn" id="planBtn" type="button">重新计算</button>
+              </div>
+            </div>
+            <div id="depPlan" class="dep-plan">点击“重新计算”查看依赖。</div>
+            <label class="checkbox-row">
+              <input type="checkbox" id="forceAck" />
+              <span>我已知晓强制删除会让列出的恢复点不可恢复</span>
+            </label>
+            <div class="button-row wrap">
+              <button class="btn primary" id="deleteSegmentBtn" type="button">按条件删除所选段</button>
+              <button class="btn" id="pruneBtn" type="button">预览保留策略 GC</button>
+              <button class="btn danger" id="applyPruneBtn" type="button">执行 GC</button>
+            </div>
+            <pre class="output" id="pruneOutput" hidden></pre>
+          </section>
+
+          <section class="card" aria-labelledby="opsTitle">
+            <div class="card-head"><h2 id="opsTitle">写入与故障演练</h2></div>
+            <form id="upsertForm" class="form-grid compact">
+              <div class="two-col">
+                <label class="field"><span>ID</span><input name="id" value="A-1006" required /></label>
+                <label class="field"><span>姓名</span><input name="name" value="新用户" required /></label>
+              </div>
+              <div class="two-col">
+                <label class="field"><span>套餐</span><input name="plan" value="pro" /></label>
+                <label class="field"><span>余额</span><input name="balance" type="number" value="99" /></label>
+              </div>
+              <button class="btn primary" type="submit">追加 upsert 变更</button>
+            </form>
+            <form id="deleteRowForm" class="inline-form">
+              <input name="id" value="A-1003" aria-label="要删除的行 ID" />
+              <button class="btn" type="submit">追加行删除</button>
+              <button class="btn" id="fullBtn" type="button">立即完整备份</button>
+              <button class="btn" id="rollBtn" type="button">滚动新段</button>
+            </form>
+            <div class="fault-grid">
+              <button class="btn warning" id="corruptBtn" type="button">损坏所选段</button>
+              <button class="btn warning" id="hideBtn" type="button">移走所选段（缺失）</button>
+              <button class="btn" id="unhideBtn" type="button">恢复移走的段</button>
+              <div class="overlap-row">
+                <label>源 <select id="overlapSource"></select></label>
+                <label>目标 <select id="overlapTarget"></select></label>
+                <button class="btn warning" id="overlapBtn" type="button">制造重叠</button>
+              </div>
+            </div>
+            <p class="hint">所有故障按钮只操作当前 <code>--demo</code> 仓库；可随时重置。</p>
+          </section>
+        </aside>
+      </main>
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+    <script src="/app.js" defer></script>
+  </body>
+</html>

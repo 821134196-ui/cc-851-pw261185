@@ -1,0 +1,19 @@
+{
+  "name": "minimal-backup-chain",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal full-backup plus append-only change-segment tool with second-level timeline recovery.",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m backup_chain serve .demo-repo --demo --host 0.0.0.0 --port ${PORT:-3000}",
+    "dev": "npm start",
+    "preview": "npm start",
+    "build": "node -e \"console.log('Static vanilla frontend; no build step required.')\"",
+    "serve:8000": "python3 -m backup_chain serve .demo-repo --demo --host 0.0.0.0 --port 8000",
+    "demo": "python3 -m backup_chain init .demo-repo --demo",
+    "test": "python3 -m unittest discover -s tests -v"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
